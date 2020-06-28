@@ -25,7 +25,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "nami"
-	app.Version = "20200330"
+	app.Version = "20200516"
 	app.Usage = "A decentralized binary package manager"
 	app.Authors = []*cli.Author{
 		{
@@ -114,7 +114,7 @@ func main() {
 		},
 		&cli.Command{
 			Name:  "remove",
-			Usage: "Remove package. $ nami remove github.com/txthinking/joker",
+			Usage: "Remove package. $ nami remove github.com/txthinking/brook",
 			Action: func(c *cli.Context) error {
 				n, err := NewNami()
 				if err != nil {
@@ -136,13 +136,6 @@ func main() {
 		&cli.Command{
 			Name:  "info",
 			Usage: "Print package information. $ nami info github.com/txthinking/nami",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:    "remote",
-					Aliases: []string{"r"},
-					Usage:   "With remote packages information. $ nami info --remote github.com/txthinking/nami",
-				},
-			},
 			Action: func(c *cli.Context) error {
 				n, err := NewNami()
 				if err != nil {
@@ -153,17 +146,7 @@ func main() {
 					cli.ShowCommandHelp(c, "info")
 					return nil
 				}
-				if c.Args().Len() == 2 {
-					if c.Args().Slice()[0] == "--remote" || c.Args().Slice()[0] == "-r" {
-						n.Print(c.Args().Slice()[1], true)
-						return nil
-					}
-					if c.Args().Slice()[1] == "--remote" || c.Args().Slice()[1] == "-r" {
-						n.Print(c.Args().Slice()[0], true)
-						return nil
-					}
-				}
-				n.Print(c.Args().Slice()[0], false)
+				n.Print(c.Args().Slice()[0], true)
 				return nil
 			},
 		},
@@ -178,6 +161,50 @@ func main() {
 				defer n.Close()
 				n.PrintAll()
 				return nil
+			},
+		},
+		&cli.Command{
+			Name:  "config",
+			Usage: "Configure key and value. $ nami config <key> <value>. See all keys, $ nami config",
+			Action: func(c *cli.Context) error {
+				n, err := NewNami()
+				if err != nil {
+					return err
+				}
+				defer n.Close()
+				if c.Args().Len() == 0 {
+					n.PrintConfigs()
+					return nil
+				}
+				if c.Args().Len() != 2 {
+					cli.ShowCommandHelp(c, "config")
+					return nil
+				}
+				return n.SetConfig(c.Args().Slice()[0], c.Args().Slice()[1])
+			},
+		},
+		&cli.Command{
+			Name:  "release",
+			Usage: "Create or update a version with binaries directory, such as $ nami release github.com/txthinking/nami v1.1.1 ./binaries/",
+			Action: func(c *cli.Context) error {
+				n, err := NewNami()
+				if err != nil {
+					return err
+				}
+				defer n.Close()
+				if c.Args().Len() != 3 {
+					cli.ShowCommandHelp(c, "release")
+					return nil
+				}
+				p, err := GetPublish(c.Args().Slice()[0])
+				if err != nil {
+					return err
+				}
+				err = p.Init(n)
+				if err != nil {
+					return err
+				}
+				return p.Release(c.Args().Slice()[0], c.Args().Slice()[1], c.Args().Slice()[2])
 			},
 		},
 	}
